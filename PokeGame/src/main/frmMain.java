@@ -15,6 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -22,48 +23,113 @@ import javax.swing.ImageIcon;
  */
 public class frmMain extends javax.swing.JFrame {
     
-    Pokemon whoIsThatPokemon; // objeto de la clase que hace match con los datos de la API
-    Pokedex dexter = new Pokedex();
-    PokeViewer visor = new PokeViewer();
-    Reloj horaActual = new Reloj();
+    Pokemon whoIsThatPokemon1; // objeto 1 de la clase Pokemon que hará match con lo descargado de la API
+    Pokemon whoIsThatPokemon2; // objeto 2 de la clase Pokemon que hará match con lo descargado de la API
+    Pokemon whoIsThatPokemon3; // objeto 3 de la clase Pokemon que hará match con lo descargado de la API
+    Pokemon whoIsThatPokemon4; // objeto 4 de la clase Pokemon que hará match con lo descargado de la API
+    Pokemon chosen_pokemon; // Pokemon elegido por el juego
+    Pokedex dexter = new Pokedex(); // clase que conecta a la API
+    PokeViewer visor = new PokeViewer(); // hilo que mostrará los sprites del Pokemon
+    Reloj horaActual = new Reloj(); // hilo que muestra la hora del sistema
+    Organizer myThread; // hilo que se encargará de buscar al Pokemon en la API pública
 
     /**
      * Creates new form frmMain
      */
     public frmMain() {
         initComponents();
+        btnPokemon1.setEnabled(false);
+        btnPokemon2.setEnabled(false);
+        btnPokemon3.setEnabled(false);
+        btnPokemon4.setEnabled(false);
         horaActual.start();
+        visor.start();
     }
     
-    public class PokeViewer {
-        public void mostrarSprites() {
-            if (whoIsThatPokemon != null){
-                try {
-                    lblSprite.setText("");
-                    // obtengo la url del listado de cada uno de los sprites que me dio la API
-                    URL url = new URL(whoIsThatPokemon.getSprites().get("front_default").toString());
-                    Image img = ImageIO.read(url);
-                    lblSprite.setIcon(new ImageIcon(img));
-                    // 1 segundo para cada cambio de sprite
-                    Thread.sleep(1000);
+    public class PokeViewer extends Thread{
+        
+        @Override
+        public void run() {
+            while (true) {
+                if (chosen_pokemon != null){
+                    try {
+                        while(true) {
+                            lblSprite.setText("");
+                            // obtengo la url del listado de cada uno de los sprites que me dio la API
+                            URL url = new URL(chosen_pokemon.getSprites().get("front_default").toString());
+                            Image img = ImageIO.read(url);
+                            lblSprite.setIcon(new ImageIcon(img));
+                            // 1 segundo para cada cambio de sprite
+                            Thread.sleep(1000);
                         
-                    url = new URL(whoIsThatPokemon.getSprites().get("back_default").toString());
-                    img = ImageIO.read(url);
-                    lblSprite.setIcon(new ImageIcon(img));
-                    Thread.sleep(1000);
-                } catch (MalformedURLException ex) {
-                    Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (InterruptedException | IOException ex) {
+                            url = new URL(chosen_pokemon.getSprites().get("back_default").toString());
+                            img = ImageIO.read(url);
+                            lblSprite.setIcon(new ImageIcon(img));
+                            Thread.sleep(1000);
+                        }
+                    } catch (MalformedURLException ex) {
+                        Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (InterruptedException | IOException ex) {
+                        Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                else{
+                    lblSprite.setText("?");
+                    btnPokemon1.setText("???");
+                    btnPokemon2.setText("???");
+                    btnPokemon3.setText("???");
+                    btnPokemon4.setText("???");
+                }
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ex) {
                     Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-            else{
-                lblSprite.setText("?");
-                btnPokemon1.setText("???");
-                btnPokemon2.setText("???");
-                btnPokemon3.setText("???");
-                btnPokemon4.setText("???");
+        }
+    }
+    
+    public class Organizer extends Thread {
+        
+        @Override
+        public void run() {
+            btnJugar.setEnabled(false);
+            try {
+                // obtener los 4 pokemon de la API
+                whoIsThatPokemon1 = dexter.buscarPokemon();
+                whoIsThatPokemon2 = dexter.buscarPokemon();
+                whoIsThatPokemon3 = dexter.buscarPokemon();
+                whoIsThatPokemon4 = dexter.buscarPokemon();
+                btnPokemon1.setText(whoIsThatPokemon1.getName());
+                btnPokemon2.setText(whoIsThatPokemon2.getName());
+                btnPokemon3.setText(whoIsThatPokemon3.getName());
+                btnPokemon4.setText(whoIsThatPokemon4.getName());
+                // elegir aleatoriamente un pokemon de los 4
+                chosen_pokemon = new Pokemon();
+                int random = (int)(Math.random() * 4 + 1);
+                switch (random) {
+                    case 1:
+                        chosen_pokemon = whoIsThatPokemon1;
+                        break;
+                    case 2:
+                        chosen_pokemon = whoIsThatPokemon2;
+                        break;
+                    case 3:
+                        chosen_pokemon = whoIsThatPokemon3;
+                        break;
+                    default:
+                        chosen_pokemon = whoIsThatPokemon4;
+                        break;
+                }
+            } catch (IOException | InterruptedException ex) {
+                Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
             }
+            btnPokemon1.setEnabled(true);
+            btnPokemon2.setEnabled(true);
+            btnPokemon3.setEnabled(true);
+            btnPokemon4.setEnabled(true);
+            btnJugar.setEnabled(true);
+            btnJugar.setText("Jugar de nuevo");
         }
     }
 
@@ -91,12 +157,32 @@ public class frmMain extends javax.swing.JFrame {
         lblSprite.setText("?");
 
         btnPokemon1.setText("???");
+        btnPokemon1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPokemon1ActionPerformed(evt);
+            }
+        });
 
         btnPokemon2.setText("???");
+        btnPokemon2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPokemon2ActionPerformed(evt);
+            }
+        });
 
         btnPokemon3.setText("???");
+        btnPokemon3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPokemon3ActionPerformed(evt);
+            }
+        });
 
         btnPokemon4.setText("???");
+        btnPokemon4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPokemon4ActionPerformed(evt);
+            }
+        });
 
         btnJugar.setText("Jugar");
         btnJugar.addActionListener(new java.awt.event.ActionListener() {
@@ -166,18 +252,57 @@ public class frmMain extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnJugarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnJugarActionPerformed
-        try {
-            whoIsThatPokemon = dexter.buscarPokemon();
-            btnPokemon1.setText(whoIsThatPokemon.getName());
-            btnPokemon2.setText(whoIsThatPokemon.getName());
-            btnPokemon3.setText(whoIsThatPokemon.getName());
-            btnPokemon4.setText(whoIsThatPokemon.getName());
-            visor.mostrarSprites();
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(frmMain.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        btnJugar.setText("Jugar de nuevo");
+        myThread = new Organizer();
+        myThread.start();
     }//GEN-LAST:event_btnJugarActionPerformed
+
+    private void btnPokemon1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPokemon1ActionPerformed
+        // Si adivina el Pokemon:
+        if (chosen_pokemon.getName().equals(btnPokemon1.getText()))
+            JOptionPane.showMessageDialog(null, "Felicidades, ¡Ganaste!");
+        else
+            JOptionPane.showMessageDialog(null, "Incorrecto :(");
+        btnPokemon1.setEnabled(false);
+        btnPokemon2.setEnabled(false);
+        btnPokemon3.setEnabled(false);
+        btnPokemon4.setEnabled(false);
+    }//GEN-LAST:event_btnPokemon1ActionPerformed
+
+    private void btnPokemon2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPokemon2ActionPerformed
+        // TODO add your handling code here:
+        if (chosen_pokemon.getName().equals(btnPokemon2.getText()))
+            JOptionPane.showMessageDialog(null, "Felicidades, ¡Ganaste!");
+        else
+            JOptionPane.showMessageDialog(null, "Incorrecto :(");
+        btnPokemon1.setEnabled(false);
+        btnPokemon2.setEnabled(false);
+        btnPokemon3.setEnabled(false);
+        btnPokemon4.setEnabled(false);
+    }//GEN-LAST:event_btnPokemon2ActionPerformed
+
+    private void btnPokemon3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPokemon3ActionPerformed
+        // TODO add your handling code here:
+        if (chosen_pokemon.getName().equals(btnPokemon3.getText()))
+            JOptionPane.showMessageDialog(null, "Felicidades, ¡Ganaste!");
+        else
+            JOptionPane.showMessageDialog(null, "Incorrecto :(");
+        btnPokemon1.setEnabled(false);
+        btnPokemon2.setEnabled(false);
+        btnPokemon3.setEnabled(false);
+        btnPokemon4.setEnabled(false);
+    }//GEN-LAST:event_btnPokemon3ActionPerformed
+
+    private void btnPokemon4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPokemon4ActionPerformed
+        // TODO add your handling code here:
+        if (chosen_pokemon.getName().equals(btnPokemon4.getText()))
+            JOptionPane.showMessageDialog(null, "Felicidades, ¡Ganaste!");
+        else
+            JOptionPane.showMessageDialog(null, "Incorrecto :(");
+        btnPokemon1.setEnabled(false);
+        btnPokemon2.setEnabled(false);
+        btnPokemon3.setEnabled(false);
+        btnPokemon4.setEnabled(false);
+    }//GEN-LAST:event_btnPokemon4ActionPerformed
 
     /**
      * @param args the command line arguments
